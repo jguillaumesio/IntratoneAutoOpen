@@ -12,6 +12,7 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import com.intratone.autoopen.BuildConfig;
 import androidx.core.content.ContextCompat;
 
 import com.facebook.react.bridge.Arguments;
@@ -54,20 +55,26 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
   @ReactMethod
   public void setTargetNumber(String phoneNumber) {
     this.targetNumber = phoneNumber.replaceAll("[^+0-9]", "");
-    Log.d(TAG, "Target number set: " + this.targetNumber);
+    if (BuildConfig.DEBUG) {
+      Log.d(TAG, "Target number set: " + this.targetNumber.replaceAll(".", "*"));
+    }
   }
 
   @ReactMethod
   public void setExpectedCode(String code) {
     this.expectedCode = code;
     this.codeBuffer.setLength(0);
-    Log.d(TAG, "Expected code set: " + this.expectedCode);
+    if (BuildConfig.DEBUG) {
+      Log.d(TAG, "Expected code set: (" + this.expectedCode.length() + " digits)");
+    }
   }
 
   @ReactMethod
   public void setTriggerKey(String key) {
     this.triggerKey = key.isEmpty() ? "#" : key;
-    Log.d(TAG, "Trigger key set: " + this.triggerKey);
+    if (BuildConfig.DEBUG) {
+      Log.d(TAG, "Trigger key set: [REDACTED]");
+    }
   }
 
   // --- Lifecycle ---
@@ -76,7 +83,9 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
   public void startWatching() {
     if (watching) return;
     watching = true;
-    Log.d(TAG, "Started watching for calls from: " + targetNumber);
+    if (BuildConfig.DEBUG) {
+      Log.d(TAG, "Watching started for target (number redacted)");
+    }
     sendEvent("onWatchingStarted", null);
   }
 
@@ -84,7 +93,9 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
   public void stopWatching() {
     watching = false;
     stopDTMFDetector();
-    Log.d(TAG, "Stopped watching");
+    if (BuildConfig.DEBUG) {
+      Log.d(TAG, "Stopped watching");
+    }
     sendEvent("onWatchingStopped", null);
   }
 
@@ -116,15 +127,21 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
 
   public void onCallAdded(Call call) {
     String incomingNumber = getCallNumber(call);
-    Log.d(TAG, "Call added from: " + incomingNumber);
+    if (BuildConfig.DEBUG) {
+      Log.d(TAG, "Call added from: " + incomingNumber.replaceAll(".", "*"));
+    }
 
     if (!watching) {
-      Log.d(TAG, "Not watching, ignoring call");
+      if (BuildConfig.DEBUG) {
+        Log.d(TAG, "Not watching, ignoring call");
+      }
       return;
     }
 
     if (isTargetNumber(incomingNumber)) {
-      Log.d(TAG, "Target number matched! Auto-answering...");
+      if (BuildConfig.DEBUG) {
+        Log.d(TAG, "Target number matched! Auto-answering...");
+      }
       activeCall = call;
       codeBuffer.setLength(0);
 
@@ -153,7 +170,9 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
       dtmfDetector.stop();
     }
     dtmfDetector = new DTMFDetector(digit -> {
-      Log.d(TAG, "DTMF digit detected: " + digit);
+      if (BuildConfig.DEBUG) {
+        Log.d(TAG, "DTMF digit detected: " + digit);
+      }
       handleDTMFDigit(digit);
     });
     dtmfDetector.start();
@@ -186,7 +205,9 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
       }
 
       if (bufferStr.equals(expectedCode)) {
-        Log.d(TAG, "Code matched! Pressing trigger key: " + triggerKey);
+        if (BuildConfig.DEBUG) {
+          Log.d(TAG, "Code matched! Pressing trigger key: " + triggerKey);
+        }
         sendEvent("onCodeMatched", null);
 
         if (activeCall != null) {
@@ -214,7 +235,9 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
           } catch (Exception ignored) {}
         }, 200);
 
-        Log.d(TAG, "Pressed DTMF: " + dtmfChar);
+        if (BuildConfig.DEBUG) {
+          Log.d(TAG, "Pressed DTMF: " + dtmfChar);
+        }
       } catch (Exception e) {
         Log.e(TAG, "Failed to press DTMF key", e);
       }
