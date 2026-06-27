@@ -48,5 +48,11 @@
           android:value="false" />
       </service>
 
+      <!-- Foreground service to keep call-watching alive in background -->
+      <service
+        android:name=".IntercomForegroundService"
+        android:exported="false"
+        android:foregroundServiceType="phoneCall" />
+
     </application>
 </manifest>

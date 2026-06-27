@@ -77,6 +77,10 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
     if (watching) return;
     watching = true;
     Log.d(TAG, "Started watching for calls from: " + targetNumber);
+
+    // Start foreground service to prevent OS from killing the process
+    IntercomForegroundService.start(getReactApplicationContext());
+
     sendEvent("onWatchingStarted", null);
   }
 
@@ -85,6 +89,10 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
     watching = false;
     stopDTMFDetector();
     Log.d(TAG, "Stopped watching");
+
+    // Stop foreground service — app can be killed by OS again
+    IntercomForegroundService.stop(getReactApplicationContext());
+
     sendEvent("onWatchingStopped", null);
   }
 
