@@ -13,10 +13,26 @@ public class IntercomCallService extends InCallService {
 
   private static final String TAG = "IntercomCallService";
 
+  /**
+   * Redact a phone number for safe logging — show only last 2 digits.
+   */
+  private static String redactNumber(String number) {
+    if (number == null || number.isEmpty() || "unknown".equals(number)) return "<unknown>";
+    if (number.length() <= 2) return "**" + number.substring(number.length() - 1);
+    int visible = 2;
+    int maskLen = number.length() - visible;
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < maskLen; i++) sb.append('*');
+    sb.append(number.substring(maskLen));
+    return sb.toString();
+  }
+
   @Override
   public void onCallAdded(Call call) {
     super.onCallAdded(call);
-    Log.d(TAG, "Call added: " + getCallNumber(call));
+    if (BuildConfig.DEBUG) {
+      Log.d(TAG, "Call added: " + redactNumber(getCallNumber(call)));
+    }
 
     // Forward to IntercomModule
     IntercomModule module = IntercomPackage.getModule();
@@ -29,7 +45,9 @@ public class IntercomCallService extends InCallService {
       @Override
       public void onStateChanged(Call call, int newState) {
         super.onStateChanged(call, newState);
-        Log.d(TAG, "Call state changed to: " + stateToString(newState));
+        if (BuildConfig.DEBUG) {
+          Log.d(TAG, "Call state changed to: " + stateToString(newState));
+        }
 
         if (newState == Call.STATE_ACTIVE) {
           // Call is active (answered) — start DTMF detection
@@ -44,7 +62,9 @@ public class IntercomCallService extends InCallService {
   @Override
   public void onCallRemoved(Call call) {
     super.onCallRemoved(call);
-    Log.d(TAG, "Call removed");
+    if (BuildConfig.DEBUG) {
+      Log.d(TAG, "Call removed");
+    }
 
     IntercomModule module = IntercomPackage.getModule();
     if (module != null) {

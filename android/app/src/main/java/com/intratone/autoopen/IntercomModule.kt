@@ -49,25 +49,51 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
     return NAME;
   }
 
+  /**
+   * Redact a sensitive string for safe logging.
+   * Shows only the last 2 characters (if long enough), masks the rest with asterisks.
+   * Example: "1234567890" -> "********90"
+   */
+  private static String redact(String value) {
+    if (value == null || value.isEmpty()) return "<empty>";
+    if (value.length() <= 2) return "**" + value.substring(value.length() - 1);
+    int visible = 2;
+    int maskLen = value.length() - visible;
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < maskLen; i++) sb.append('*');
+    sb.append(value.substring(maskLen));
+    return sb.toString();
+  }
+
+  /**
+   * Debug log — only emitted in debug builds (stripped from release via BuildConfig.DEBUG).
+   * Never logs sensitive values in plaintext.
+   */
+  private static void debugLog(String tag, String message) {
+    if (BuildConfig.DEBUG) {
+      Log.d(tag, message);
+    }
+  }
+
   // --- Configuration ---
 
   @ReactMethod
   public void setTargetNumber(String phoneNumber) {
     this.targetNumber = phoneNumber.replaceAll("[^+0-9]", "");
-    Log.d(TAG, "Target number set: " + this.targetNumber);
+    debugLog(TAG, "Target number set: " + redact(this.targetNumber));
   }
 
   @ReactMethod
   public void setExpectedCode(String code) {
     this.expectedCode = code;
     this.codeBuffer.setLength(0);
-    Log.d(TAG, "Expected code set: " + this.expectedCode);
+    debugLog(TAG, "Expected code set: " + redact(this.expectedCode) + " (length=" + code.length() + ")");
   }
 
   @ReactMethod
   public void setTriggerKey(String key) {
     this.triggerKey = key.isEmpty() ? "#" : key;
-    Log.d(TAG, "Trigger key set: " + this.triggerKey);
+    debugLog(TAG, "Trigger key set: " + redact(this.triggerKey));
   }
 
   // --- Lifecycle ---
@@ -76,7 +102,7 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
   public void startWatching() {
     if (watching) return;
     watching = true;
-    Log.d(TAG, "Started watching for calls from: " + targetNumber);
+    debugLog(TAG, "Started watching for calls from: " + redact(targetNumber));
 
     // Start foreground service to prevent OS from killing the process
     IntercomForegroundService.start(getReactApplicationContext());
@@ -88,7 +114,7 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
   public void stopWatching() {
     watching = false;
     stopDTMFDetector();
-    Log.d(TAG, "Stopped watching");
+    debugLog(TAG, "Stopped watching");
 
     // Stop foreground service — app can be killed by OS again
     IntercomForegroundService.stop(getReactApplicationContext());
@@ -101,6 +127,7 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
     if (activeCall != null) {
       pressKeyOnCall(activeCall, triggerKey);
     } else {
+      // Log.w is preserved for warnings — no sensitive data here
       Log.w(TAG, "No active call to press key on");
     }
   }
@@ -124,15 +151,15 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
 
   public void onCallAdded(Call call) {
     String incomingNumber = getCallNumber(call);
-    Log.d(TAG, "Call added from: " + incomingNumber);
+    debugLog(TAG, "Call added from: " + redact(incomingNumber));
 
     if (!watching) {
-      Log.d(TAG, "Not watching, ignoring call");
+      debugLog(TAG, "Not watching, ignoring call");
       return;
     }
 
     if (isTargetNumber(incomingNumber)) {
-      Log.d(TAG, "Target number matched! Auto-answering...");
+      debugLog(TAG, "Target number matched! Auto-answering...");
       activeCall = call;
       codeBuffer.setLength(0);
 
@@ -161,7 +188,7 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
       dtmfDetector.stop();
     }
     dtmfDetector = new DTMFDetector(digit -> {
-      Log.d(TAG, "DTMF digit detected: " + digit);
+      debugLog(TAG, "DTMF digit detected: " + redact(digit));
       handleDTMFDigit(digit);
     });
     dtmfDetector.start();
@@ -194,7 +221,7 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
       }
 
       if (bufferStr.equals(expectedCode)) {
-        Log.d(TAG, "Code matched! Pressing trigger key: " + triggerKey);
+        debugLog(TAG, "Code matched! Pressing trigger key: " + redact(triggerKey));
         sendEvent("onCodeMatched", null);
 
         if (activeCall != null) {
@@ -222,8 +249,9 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
           } catch (Exception ignored) {}
         }, 200);
 
-        Log.d(TAG, "Pressed DTMF: " + dtmfChar);
+        debugLog(TAG, "Pressed DTMF: " + redact(String.valueOf(dtmfChar)));
       } catch (Exception e) {
+        // Log.e preserved for errors — no sensitive data in exception message
         Log.e(TAG, "Failed to press DTMF key", e);
       }
     }
@@ -250,6 +278,7 @@ public class IntercomModule extends NativeIntercomModuleSpec implements TurboMod
         .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
         .emit(eventName, params);
     } catch (Exception e) {
+      // Log.e preserved for errors — no sensitive data
       Log.e(TAG, "Failed to send event: " + eventName, e);
     }
   }

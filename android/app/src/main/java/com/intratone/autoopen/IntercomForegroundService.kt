@@ -53,7 +53,7 @@ class IntercomForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        Log.d(TAG, "Foreground service created")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Foreground service created")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -78,7 +78,7 @@ class IntercomForegroundService : Service() {
             // permission or isn't in a valid state. Fall back to regular start.
         }
 
-        Log.d(TAG, "Foreground service started — call watching active")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Foreground service started — call watching active")
         return START_STICKY
     }
 
@@ -89,7 +89,7 @@ class IntercomForegroundService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "Foreground service destroyed")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Foreground service destroyed")
     }
 
     /**
