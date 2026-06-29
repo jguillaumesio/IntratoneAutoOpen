@@ -85,6 +85,10 @@ android {
         versionCode 1
         versionName "1.0"
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = false
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -110,6 +114,9 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+
+    // Unit tests for the Goertzel DTMF detector (pure-Kotlin core).
+    testImplementation "junit:junit:4.13.2"
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
